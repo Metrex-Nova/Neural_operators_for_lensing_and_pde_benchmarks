@@ -67,9 +67,3 @@ A table of everything that differs *across* datasets (batch size, optimizer,
 `FMAX` formula, the two different `evaluate()` conventions used by Darcy/NS
 vs. lensing, and how the DeepONet-variant study's data pipeline differs from
 the main lensing pipeline).
-## Known issue to resolve before camera-ready
-
-`train_darcy_pooling_ablation.py`'s paper states results are "mean ± std
-over 5 seeds," but the code's `SEEDS` list has 3 entries (`[7, 21, 42]`).
-Either the paper text needs correcting to 3, or 2 more seeds need to be run
-and the table regenerated.
