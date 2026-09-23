@@ -1,8 +1,15 @@
 # %% MASTER SCRIPT -- 7 DeepONet variants (Vanilla, Stacked, Conv, Fourier,
-# Attention, POD, BelNet), 3 seeds each, alpha-only (no image/warp/PSF).
-# 2000/250 split, 40 epochs. Reports rel_L2 + SSIM (mean +/- std over
-# seeds), param counts, wall-clock time per architecture, a combined
-# qualitative grid, and a final summary table.
+# Attention, POD, BelNet) + an FNO baseline row, 3 seeds each, alpha-only
+# (no image/warp/PSF). 2000/250 split, 40 epochs. Reports rel_L2 + SSIM
+# (mean +/- std over seeds), param counts, wall-clock time per architecture,
+# a combined qualitative grid, and a final summary table.
+#
+# The FNO row is a baseline comparison point (paper 3's headline result:
+# FNO substantially outperforms every DeepONet variant on raw field
+# reconstruction) -- it is not itself a DeepONet variant. Not included here:
+# the frozen-representation classification probe and the two POD+FNO hybrid
+# experiments described in the paper's Discussion -- ask for those
+# separately if you want them added.
 #
 # This is a separate DeepONet-branch/trunk ablation study (workshop-paper
 # scope), distinct from the 11-architecture BALANI-NO comparison in
@@ -418,6 +425,55 @@ class BelNet(nn.Module):
         out = torch.einsum("bcp,ncp->bcn", b_out, t_out) + self.bias.view(1,-1,1)
         return out.view(B, self.out_channels, H, W)
 
+class SpectralConv2d(nn.Module):
+    def __init__(self, in_channels, out_channels, modes1, modes2):
+        super().__init__()
+        self.in_channels, self.out_channels = in_channels, out_channels
+        self.modes1, self.modes2 = modes1, modes2
+        scale = 1.0 / (in_channels * out_channels)
+        self.weights1 = nn.Parameter(scale * torch.rand(in_channels, out_channels, modes1, modes2, dtype=torch.cfloat))
+        self.weights2 = nn.Parameter(scale * torch.rand(in_channels, out_channels, modes1, modes2, dtype=torch.cfloat))
+    def compl_mul2d(self, inp, weights):
+        return torch.einsum("bixy,ioxy->boxy", inp, weights)
+    def forward(self, x):
+        B = x.shape[0]
+        x_ft = torch.fft.rfft2(x)
+        out_ft = torch.zeros(B, self.out_channels, x.size(-2), x.size(-1)//2+1, dtype=torch.cfloat, device=x.device)
+        out_ft[:, :, :self.modes1, :self.modes2] = self.compl_mul2d(x_ft[:, :, :self.modes1, :self.modes2], self.weights1)
+        out_ft[:, :, -self.modes1:, :self.modes2] = self.compl_mul2d(x_ft[:, :, -self.modes1:, :self.modes2], self.weights2)
+        return torch.fft.irfft2(out_ft, s=(x.size(-2), x.size(-1)))
+
+class FNOBlock(nn.Module):
+    def __init__(self, width, modes1, modes2):
+        super().__init__()
+        self.spectral = SpectralConv2d(width, width, modes1, modes2)
+        self.local = nn.Conv2d(width, width, 1)
+        self.act = nn.GELU()
+    def forward(self, x):
+        return self.act(self.spectral(x) + self.local(x))
+
+class FNO2d(nn.Module):
+    # baseline comparison point for the DeepONet-family ablation (paper 3,
+    # Table 1's "FNO" row) -- not itself part of the DeepONet family.
+    def __init__(self, in_channels=1, out_channels=2, width=36, modes1=8, modes2=8, n_layers=4, res=64):
+        super().__init__()
+        self.res = res
+        ys, xs = torch.meshgrid(torch.linspace(0, 1, res), torch.linspace(0, 1, res), indexing="ij")
+        self.register_buffer("grid", torch.stack([ys, xs], dim=0))
+        self.fc_in = nn.Conv2d(in_channels + 2, width, 1)
+        self.blocks = nn.ModuleList([FNOBlock(width, modes1, modes2) for _ in range(n_layers)])
+        self.fc_out1 = nn.Conv2d(width, width, 1)
+        self.fc_out2 = nn.Conv2d(width, out_channels, 1)
+        self.act = nn.GELU()
+    def forward(self, x):
+        B = x.shape[0]
+        grid = self.grid.unsqueeze(0).repeat(B, 1, 1, 1)
+        h = self.fc_in(torch.cat([x, grid], dim=1))
+        for block in self.blocks:
+            h = block(h)
+        h = self.act(self.fc_out1(h))
+        return self.fc_out2(h)
+
 def make_vanilla():   return VanillaDeepONet(res=RES, out_channels=2, p=128, branch_hidden=256, trunk_hidden=128)
 def make_stacked():   return StackedDeepONet(res=RES, out_channels=2, p=128, branch_hidden=256, trunk_hidden=128)
 def make_conv():      return ConvDeepONet(res=RES, out_channels=2, p=128, trunk_hidden=128)
@@ -428,10 +484,12 @@ def make_pod():        return PODDeepONet(POD_BASIS_X.clone(), POD_MEAN_X.clone(
                                             n_modes=N_POD_MODES, branch_dim=128)
 def make_belnet():    return BelNet(res=RES, out_channels=2, p=128, n_encoder_modes=64, n_freqs=64,
                                      fourier_scale=10.0, trunk_hidden=128, mlp_hidden=256)
+def make_fno():        return FNO2d(in_channels=1, out_channels=2, width=36, modes1=8, modes2=8, n_layers=4, res=RES)
 
 ARCHITECTURES = {
     "Vanilla": make_vanilla, "Stacked": make_stacked, "Conv": make_conv,
     "Fourier": make_fourier, "Attention": make_attention, "POD": make_pod, "BelNet": make_belnet,
+    "FNO": make_fno,  # baseline comparison, not a DeepONet variant -- see paper 3, Table 1
 }
 
 # ===========================================================================
