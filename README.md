@@ -1,23 +1,19 @@
-# BALANI-NO / Neural Operators for Lensing and PDE Benchmarks
+# Neural Operators for Lensing and PDE Benchmarks
 
-Code for a GSoC project spanning one ICLR submission and (currently) one
-ML4PS workshop paper, built around a common family of neural-operator
-architectures (BALANI-NO, FNO, ALNO, LNO, PDNO, UNO, U-FNO, HC-UNO, CNN,
-DeepONet, POD-DeepONet) evaluated across Darcy flow, Navier-Stokes
+Here is the code for the GSoC project https://ml4sci.org/gsoc/2026/proposal_DEEPLENSE3.html.
+This contains the architectures:- BALANI-NO, FNO, ALNO, LNO, PDNO, UNO, U-FNO, HC-UNO, CNN,
+DeepONet, POD-DeepONet evaluated across Darcy flow, Navier-Stokes
 vorticity, and gravitational lensing tasks.
 
 - **ICLR submission**: the 11-architecture comparison across Darcy,
   Navier-Stokes, and two lensing variants (full-field and subhalo-only).
-- **ML4PS workshop paper** ("Pooling Discards Resolution-Invariant
-  Structure"): a separate, narrower study — CNN/FNO/U-FNO/UNO/HC-UNO plus a
-  no-pooling ablation of UNO/HC-UNO, on Darcy only.
-- A DeepONet branch/trunk ablation study (7 variants + an FNO baseline) is
-  also included; see the file table below for which paper each script maps to.
-
-Two more ML4PS workshop papers (deflection-to-convergence reconstruction,
-and the DeepONet-variant lensing comparison this repo's
-`train_lensing_deeponet_variants.py` partially covers) exist but their code
-isn't fully reflected here yet — see "Not included" below.
+- **ML4PS workshop papers** 1) Neural Operator Learning for Cross-Class Dark
+Matter Convergence Reconstruction
+2) Pooling Discards Resolution-Invariant Structure: An
+Architecture and Ablation Study on Darcy Flow
+3) A Systematic Comparison of DeepONet Variants for
+Physics-Constrained Strong-Lensing Operator
+Learning
 
 ## Setup
 
@@ -38,9 +34,7 @@ time; each script also runs on CPU (slower) with no code changes.
 | `train_lensing_deeponet_variants.py` | Separate ablation: 7 DeepONet branch/trunk variants (Vanilla, Stacked, Conv, Fourier, Attention, POD, BelNet) + an FNO baseline row, 3 seeds, rel_L2 + SSIM |
 | `train_darcy_pooling_ablation.py` | Workshop paper: CNN, FNO, U-FNO, UNO, HC-UNO + no-pool ablation of UNO/HC-UNO, 3 seeds, Darcy @16/@32. Separate architecture set from the 11-arch comparison |
 
-Each script is fully self-contained (download → load → train → eval) and
-runs standalone, matching how it was originally validated as a single
-Kaggle-notebook cell.
+Each script is fully self-contained (download → load → train → eval).
 
 ## Reproducing each table
 
@@ -72,37 +66,7 @@ seeds: `0, 1, 2`.
 A table of everything that differs *across* datasets (batch size, optimizer,
 `FMAX` formula, the two different `evaluate()` conventions used by Darcy/NS
 vs. lensing, and how the DeepONet-variant study's data pipeline differs from
-the main lensing pipeline) — read this before comparing numbers across
-tasks, since some of these differences change what a given metric actually
-measures.
-
-## Reproducibility notes
-
-- Model selection (best-checkpoint) uses only the in-distribution validation
-  set for every architecture and every dataset; zero-shot splits (Darcy @32,
-  NS @64, lensing CDM/Axion) are never used for early stopping.
-- Every architecture within the 11-architecture comparison is
-  parameter-matched to BALANI-NO's parameter count (~112K) per dataset; see
-  the `MODEL_ZOO` list at the top of each script for exact configs.
-- Full per-seed results (not just mean ± std) are saved in the `.pt`
-  checkpoint files each script writes alongside its summary CSV.
-
-## Not included in this repo
-
-- Trained model checkpoints (`*.pt`) — too large; excluded via `.gitignore`.
-- Raw datasets — downloaded automatically by `train_darcy.py`/`train_ns.py`/
-  `train_darcy_pooling_ablation.py` (all use `neuraloperator`'s built-in
-  Darcy loaders); lensing data is not publicly redistributed here.
-- A standalone exploratory FNO-only lensing script (superseded by
-  `train_lensing.py`'s FNO entry) is intentionally left out as redundant.
-- An earlier draft of the Darcy pooling-ablation code (relative-frequency
-  filter bank, no no-pool ablation, only 5 architectures) is superseded by
-  `train_darcy_pooling_ablation.py` and left out.
-- Code for the deflection-to-convergence workshop paper (α→κ, the reverse
-  of `train_lensing.py`'s task) and the classification-probe / hybrid
-  POD+FNO experiments from the DeepONet-variant paper are not yet in this
-  repo — ask if these are needed.
-
+the main lensing pipeline).
 ## Known issue to resolve before camera-ready
 
 `train_darcy_pooling_ablation.py`'s paper states results are "mean ± std
