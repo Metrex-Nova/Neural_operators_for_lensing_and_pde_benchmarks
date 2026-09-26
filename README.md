@@ -1,19 +1,8 @@
 # Neural Operators for Lensing and PDE Benchmarks
 
-Here is the code for the GSoC project https://ml4sci.org/gsoc/2026/proposal_DEEPLENSE3.html.
 This contains the architectures:- BALANI-NO, FNO, ALNO, LNO, PDNO, UNO, U-FNO, HC-UNO, CNN,
 DeepONet, POD-DeepONet evaluated across Darcy flow, Navier-Stokes
 vorticity, and gravitational lensing tasks.
-
-- **ICLR submission**: the 11-architecture comparison across Darcy,
-  Navier-Stokes, and two lensing variants (full-field and subhalo-only).
-- **ML4PS workshop papers** 1) Neural Operator Learning for Cross-Class Dark
-Matter Convergence Reconstruction
-2) Pooling Discards Resolution-Invariant Structure: An
-Architecture and Ablation Study on Darcy Flow
-3) A Systematic Comparison of DeepONet Variants for
-Physics-Constrained Strong-Lensing Operator
-Learning
 
 ## Setup
 
