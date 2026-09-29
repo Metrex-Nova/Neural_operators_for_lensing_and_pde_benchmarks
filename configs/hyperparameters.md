@@ -46,14 +46,3 @@ field keys read differ. Run the script once per variant to reproduce both
 tables; outputs are suffixed with the variant name so they don't collide
 (`lensing_all11_full_7seed_summary.csv`, `lensing_all11_sub_7seed_summary.csv`).
 
-## Known open items (not yet resolved as of this repo state)
-
-- UNO's original single-seed diagnostic cell for lensing used `EPOCHS=40`
-  while every other architecture used 60; `train_lensing.py` standardizes to
-  60 for a fair comparison. If 40 was intentional, this needs to be special-cased.
-- Darcy's PDNO/UNO/U-FNO/CNN show large `@16 -> @32` degradation
-  (up to ~8.9x for CNN) — see the paper's Limitations section.
-- NS's `@32 -> @64` "zero-shot" test carries 0% new spectral energy beyond
-  what's resolvable at 32x32 (verified via `radial_power_spectrum` in the
-  data-loading cell) — degradation there reflects grid-resolution
-  brittleness in some architectures, not recovery of finer physics.
